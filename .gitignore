@@ -1,0 +1,4 @@
+src/config.h
+.pio/
+jadx/
+.DS_Store
