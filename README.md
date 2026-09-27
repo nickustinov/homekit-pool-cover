@@ -1,6 +1,6 @@
 # homekit-pool-cover
 
-An ESP32 firmware that lets you open, close and stop an Abriblue (A.S. Pool) slatted pool cover from the Apple Home app. The ESP32 connects to the cover's controller over Bluetooth, the same way the Aero XP app does, and shows up in HomeKit as a native accessory. Homebridge is not needed.
+An ESP32 firmware that lets you open and close an Abriblue (A.S. Pool) slatted pool cover from the Apple Home app. The ESP32 connects to the cover's controller over Bluetooth, the same way the Aero XP app does, and shows up in HomeKit as a native accessory. Homebridge is not needed.
 
 ```
 Home app ──HomeKit (WiFi)──▶ ESP32 ──Bluetooth──▶ cover controller
@@ -12,11 +12,10 @@ Home app ──HomeKit (WiFi)──▶ ESP32 ──Bluetooth──▶ cover cont
 
 One accessory called **Pool Cover** with:
 
-- **Open** – starts opening. It stays on while the cover moves; turn it off to stop.
-- **Close** – same, for closing.
-- **Stop** – stops the cover mid-move and turns itself back off after a second.
+- **Open** – starts opening. It stays on while the cover moves.
+- **Close** – starts closing. It stays on while the cover moves; turn it off to stop.
 
-The Home app may group the three into one tile. To get three separate buttons, open the tile's settings and choose **Show as Separate Tiles**.
+The Home app may group the two into one tile. To get separate buttons, open the tile's settings and choose **Show as Separate Tiles**.
 
 HomeKit setup code: **`466-37-726`** (HomeSpan's default, see [Add to the Home app](#add-to-the-home-app) to change it).
 
@@ -30,8 +29,8 @@ The controller has three operating modes, and the bridge reads the current one e
 | Impulse | tap | tap |
 | Hold | hold-to-run | hold-to-run |
 
-- **Hold-to-run direction:** the bridge keeps the button held for up to `MOVE_TIME_MS`, and Stop releases it.
-- **Tap direction:** the bridge taps once and stays connected for `MOVE_TIME_MS`, and Stop taps the opposite button.
+- **Hold-to-run direction:** the bridge keeps the button held for up to `MOVE_TIME_MS`. Turning the switch off releases it and the cover stops.
+- **Tap direction:** the bridge taps once and the cover runs to its end stop. It can't be stopped from HomeKit; use the key switch or the Aero XP app.
 
 ## Hardware
 
@@ -97,8 +96,8 @@ That is HomeSpan's default code. To set your own, type `S 12345678` (any 8 digit
 Keep the serial monitor open and the pool in sight:
 
 1. Turn on **Open** in the Home app. The log should show `[cover] opening`, then `[cover] mode '1', tapping open`.
-2. Tap **Stop** partway and check that the cover stops.
-3. Turn on **Close** and let it run to the end.
+2. Turn on **Close**, then turn it off partway and check that the cover stops.
+3. Turn on **Close** again and let it run to the end.
 
 | Log message | Meaning |
 |---|---|

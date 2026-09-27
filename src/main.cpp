@@ -77,8 +77,8 @@ static bool isTapDirection(Dir dir) {
 }
 
 // Runs one move while staying connected for MOVE_TIME_MS so a stop takes effect at once.
-// Hold directions keep the button down and stop on release. Tap directions start with
-// a tap and stop with a tap of the opposite button (a second tap of the same one doesn't).
+// Hold directions keep the button down and stop on release. Tap directions can't be
+// stopped over Bluetooth: releasing and re-tapping were both tried on a real cover.
 static bool runMove(Dir dir) {
   if (!findCover()) {
     Serial.println("[cover] not found");
@@ -116,7 +116,6 @@ static bool runMove(Dir dir) {
     }
     if (!client->isConnected()) Serial.println("[cover] controller disconnected");
     if (!tapMode) send(tx, off);
-    else if (stopRequested) dir == OPEN ? tap(tx, CLOSE_ON, CLOSE_HOLD, CLOSE_OFF) : tap(tx, OPEN_ON, OPEN_HOLD, OPEN_OFF);
     if (stopRequested) Serial.println("[cover] stopped");
   }
   client->disconnect();
@@ -143,8 +142,8 @@ static void bleTask(void *) {
 
 // ---------- HomeKit side ----------
 
-// Open / Close: turning on starts the move, the switch stays on while it runs,
-// turning it off stops it. A move in the other direction is stopped first.
+// Open / Close: turning on starts the move and the switch stays on while it runs.
+// Turning it off stops a hold-to-run move. A move in the other direction is ended first.
 struct MoveButton : Service::Switch {
   SpanCharacteristic *on;
   Dir dir;
@@ -170,27 +169,6 @@ struct MoveButton : Service::Switch {
   }
 };
 
-struct StopButton : Service::Switch {
-  SpanCharacteristic *on;
-
-  StopButton() : Service::Switch() {
-    on = new Characteristic::On(false);
-    new Characteristic::ConfiguredName("Stop");
-  }
-
-  boolean update() override {
-    if (on->getNewVal()) {
-      request = NONE;
-      if (active != NONE) stopRequested = true;
-    }
-    return true;
-  }
-
-  void loop() override {
-    if (on->getVal() && on->timeVal() > 1000) on->setVal(false);  // momentary button
-  }
-};
-
 void setup() {
   Serial.begin(115200);
 
@@ -205,7 +183,6 @@ void setup() {
   new Characteristic::Identify();
   new MoveButton(OPEN, "Open");
   new MoveButton(CLOSE, "Close");
-  new StopButton();
 }
 
 void loop() {
