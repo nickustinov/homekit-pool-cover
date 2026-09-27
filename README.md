@@ -31,7 +31,7 @@ The controller has three operating modes, and the bridge reads the current one e
 | Hold | hold-to-run | hold-to-run |
 
 - **Hold-to-run direction:** the bridge keeps the button held for up to `MOVE_TIME_MS`, and Stop releases it.
-- **Tap direction:** the bridge taps once and stays connected for `MOVE_TIME_MS`, and Stop taps again, like the key switch.
+- **Tap direction:** the bridge taps once and stays connected for `MOVE_TIME_MS`, and Stop taps the opposite button.
 
 ## Hardware
 

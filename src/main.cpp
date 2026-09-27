@@ -78,7 +78,7 @@ static bool isTapDirection(Dir dir) {
 
 // Runs one move while staying connected for MOVE_TIME_MS so a stop takes effect at once.
 // Hold directions keep the button down and stop on release. Tap directions start with
-// a tap and stop with a second tap, like the key switch.
+// a tap and stop with a tap of the opposite button (a second tap of the same one doesn't).
 static bool runMove(Dir dir) {
   if (!findCover()) {
     Serial.println("[cover] not found");
@@ -116,7 +116,7 @@ static bool runMove(Dir dir) {
     }
     if (!client->isConnected()) Serial.println("[cover] controller disconnected");
     if (!tapMode) send(tx, off);
-    else if (stopRequested) tap(tx, on, hold, off);
+    else if (stopRequested) dir == OPEN ? tap(tx, CLOSE_ON, CLOSE_HOLD, CLOSE_OFF) : tap(tx, OPEN_ON, OPEN_HOLD, OPEN_OFF);
     if (stopRequested) Serial.println("[cover] stopped");
   }
   client->disconnect();
