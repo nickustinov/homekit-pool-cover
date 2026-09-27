@@ -7,6 +7,8 @@ static const NimBLEUUID SERVICE_UUID("49535343-fe7d-4ae5-8fa9-9fafd205e455");
 static const NimBLEUUID WRITE_UUID("49535343-8841-43f4-a8d4-ecbe34729bb3");
 static const NimBLEUUID NOTIFY_UUID("49535343-1e4d-4bd9-ba61-23c647249616");
 static const uint32_t SEND_INTERVAL_MS = 150;  // same cadence as the app's send loop
+// The app repeats the same action no faster than this: 130ms, or 4s on "universal" cards
+static const uint32_t REPEAT_MS = 130, REPEAT_UNIVERSAL_MS = 4000;
 
 enum Dir { NONE, OPEN, CLOSE };
 
@@ -16,6 +18,7 @@ static volatile Dir active = NONE;   // direction of the move in progress
 static volatile bool stopRequested = false;
 static volatile char replyType = 0;  // type byte of the last notification from the cover
 static volatile char opMode = 0;     // operating mode from the 'P' reply, see PROTOCOL.md
+static volatile bool universal = false;  // card type 05 or 15, from the 'P' reply
 
 static NimBLEClient *client;
 static NimBLEAddress coverAddr;
@@ -24,8 +27,12 @@ static bool coverFound = false;
 // ---------- BLE side ----------
 
 static void onNotify(NimBLERemoteCharacteristic *, uint8_t *data, size_t len, bool) {
+  Serial.print("[cover] <= ");
+  for (size_t i = 0; i < len; i++) Serial.print(isprint(data[i]) ? (char)data[i] : '.');
+  Serial.println();
   if (len > 5 && data[0] == 0x02) replyType = data[5];
   if (len > 8 && data[5] == 'P') opMode = data[8];
+  if (len > 25 && data[5] == 'P') universal = data[25] == '5' && (data[24] == '0' || data[24] == '1');
 }
 
 static bool send(NimBLERemoteCharacteristic *c, char action) {
@@ -103,15 +110,19 @@ static bool runMove(Dir dir) {
     const char hold = dir == OPEN ? OPEN_HOLD : CLOSE_HOLD;
     const char off = dir == OPEN ? OPEN_OFF : CLOSE_OFF;
     const bool tapMode = isTapDirection(dir);
-    Serial.printf("[cover] mode '%c', %s %s\n", opMode ? opMode : '?', tapMode ? "tapping" : "holding",
-                  dir == OPEN ? "open" : "close");
+    const uint32_t repeatMs = universal ? REPEAT_UNIVERSAL_MS : REPEAT_MS;
+    Serial.printf("[cover] mode '%c'%s, %s %s\n", opMode ? opMode : '?', universal ? " universal" : "",
+                  tapMode ? "tapping" : "holding", dir == OPEN ? "open" : "close");
 
     ok = tapMode ? tap(tx, on, hold, off) : send(tx, on);
-    uint32_t start = millis();
+    uint32_t start = millis(), lastSent = millis();
     while (ok && !stopRequested && millis() - start < MOVE_TIME_MS && client->isConnected()) {
       delay(SEND_INTERVAL_MS);
+      if (millis() - lastSent < repeatMs) continue;
       ok = send(tx, tapMode ? KEEP_ALIVE : hold);
+      lastSent = millis();
     }
+    if (!client->isConnected()) Serial.println("[cover] controller disconnected");
     if (!tapMode) send(tx, off);
     else if (stopRequested) tap(tx, on, hold, off);
     if (stopRequested) Serial.println("[cover] stopped");
@@ -121,6 +132,7 @@ static bool runMove(Dir dir) {
 }
 
 static void bleTask(void *) {
+  findCover();  // scan now so the first button press isn't delayed by it
   for (;;) {
     Dir dir = request;
     if (dir == NONE) {
