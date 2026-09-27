@@ -15,6 +15,8 @@ One accessory called **Pool Cover** with:
 - **Window covering** – open, close, or drag to a position.
 - **Stop** – a switch that stops the cover mid-move and turns itself back off after a second.
 
+HomeKit setup code: **`466-37-726`** (HomeSpan's default, see [Add to the Home app](#add-to-the-home-app) to change it).
+
 The controller doesn't report where the cover is, so position is estimated from the elapsed time. Set your real travel times (see [Configure](#configure)) to make the estimate match.
 
 ## Hardware
