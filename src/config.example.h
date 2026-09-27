@@ -3,11 +3,7 @@
 // 4-digit code entered in the Aero XP app. It is the only auth the cover checks.
 #define COVER_KEY "0000"
 
-// Full travel times. Stopwatch a full open and a full close and put them here:
-// they drive the position estimate and how long the button is held.
-#define OPEN_TIME_MS 120000
-#define CLOSE_TIME_MS 120000
-
-// Keep holding past the estimated travel time so the cover always reaches its
-// own end stop. The controller stops the motor at its limits.
-#define EXTRA_HOLD_MS 5000
+// How long each move keeps the connection (and, in hold-to-run directions, the
+// button). Set it a bit longer than a full open or close; the controller stops
+// the motor at its end stops.
+#define MOVE_TIME_MS 125000

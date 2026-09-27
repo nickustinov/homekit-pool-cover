@@ -12,12 +12,26 @@ Home app ──HomeKit (WiFi)──▶ ESP32 ──Bluetooth──▶ cover cont
 
 One accessory called **Pool Cover** with:
 
-- **Window covering** – open, close, or drag to a position.
-- **Stop** – a switch that stops the cover mid-move and turns itself back off after a second.
+- **Open** – starts opening. It stays on while the cover moves; turn it off to stop.
+- **Close** – same, for closing.
+- **Stop** – stops the cover mid-move and turns itself back off after a second.
+
+The Home app may group the three into one tile. To get three separate buttons, open the tile's settings and choose **Show as Separate Tiles**.
 
 HomeKit setup code: **`466-37-726`** (HomeSpan's default, see [Add to the Home app](#add-to-the-home-app) to change it).
 
-The controller doesn't report where the cover is, so position is estimated from the elapsed time. Set your real travel times (see [Configure](#configure)) to make the estimate match.
+### How moves and stops work
+
+The controller has three operating modes, and the bridge reads the current one each time it connects:
+
+| Mode | Open | Close |
+|---|---|---|
+| Standard (default) | tap | hold-to-run |
+| Impulse | tap | tap |
+| Hold | hold-to-run | hold-to-run |
+
+- **Hold-to-run direction:** the bridge keeps the button held for up to `MOVE_TIME_MS`, and Stop releases it.
+- **Tap direction:** the bridge taps once and stays connected for `MOVE_TIME_MS`, and Stop taps again, like the key switch.
 
 ## Hardware
 
@@ -44,9 +58,7 @@ Then edit `src/config.h`:
 | Setting | What to put there |
 |---|---|
 | `COVER_KEY` | The 4-digit code you entered in the Aero XP app when you added the cover. |
-| `OPEN_TIME_MS` | How long a full open takes, in milliseconds. Time it with a stopwatch. |
-| `CLOSE_TIME_MS` | How long a full close takes, in milliseconds. |
-| `EXTRA_HOLD_MS` | How long to keep holding after the estimated end, so the cover always reaches its end stop. 5000 is fine. |
+| `MOVE_TIME_MS` | How long a move lasts, in milliseconds. Set it a few seconds longer than your slowest full open or close. The controller stops the motor at its end stops by itself. |
 
 `src/config.h` is git-ignored because it holds your cover code.
 
@@ -84,14 +96,14 @@ That is HomeSpan's default code. To set your own, type `S 12345678` (any 8 digit
 
 Keep the serial monitor open and the pool in sight:
 
-1. Tap open in the Home app. The log should show `[cover] found at …` and then `[cover] opening`.
+1. Turn on **Open** in the Home app. The log should show `[cover] opening`, then `[cover] mode '1', tapping open`.
 2. Tap **Stop** partway and check that the cover stops.
-3. Do a full close.
+3. Turn on **Close** and let it run to the end.
 
 | Log message | Meaning |
 |---|---|
 | `[cover] not found` | The ESP32 can't see the controller. Move it closer, and close the Aero XP app on your phone (the controller accepts one connection at a time). |
-| `[cover] connect failed` | Same as above. Also try power-cycling the ESP32. |
+| `[cover] connect attempt … failed` | The controller was busy. The bridge retries 3 times, 2 seconds apart. If all fail, check as for "not found". |
 | `no parameters reply … wrong key?` | The controller rejected `COVER_KEY`. Check the code. |
 
 ## Useful serial commands
@@ -103,11 +115,12 @@ HomeSpan has a built-in command line. Type `?` in the monitor for the full list.
 | `W` | Set the WiFi network |
 | `S 12345678` | Set the HomeKit setup code |
 | `U` | Unpair from HomeKit (remove it in the Home app too) |
-| `E` | Erase all settings: WiFi, pairing and saved position |
+| `E` | Erase all settings: WiFi and pairing |
 
 ## Troubleshooting
 
-- **The position in the Home app drifts.** Re-time a full open and close and update `OPEN_TIME_MS` and `CLOSE_TIME_MS`. A full open or close always runs to the end stop and resets the estimate.
+- **Close stops before the end.** A full close takes longer than `MOVE_TIME_MS`. Increase it and reflash.
+- **The Home app shows old controls after an update.** Remove the accessory in the Home app, type `U` in the serial monitor, and pair again.
 - **A neighbour's cover gets picked up.** The ESP32 connects to the first device named `Cover` it finds. Lock it to your controller's address, which the log prints as `[cover] found at …`, in `findCover()` in `src/main.cpp`.
 - **The first `pio run` fails with a GitHub timeout.** PlatformIO's downloader sometimes times out when curl works fine. Download the platform manually and install it:
   ```sh

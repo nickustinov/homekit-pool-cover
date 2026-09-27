@@ -31,6 +31,8 @@ xor = 0xFF ^ every preceding byte
 | `3` | Stop |
 | `8` | Request parameters. The reply is a `P` notification. |
 
+The app never sends `3` as a stop: in its UI you stop a tap-direction move with another tap, and a hold-direction move by releasing the button. Releasing (`OFF`) does not stop a tap-direction move; confirmed on a real cover.
+
 The fitter-only variants (`a`–`l`) bypass safeties. Never use them.
 
 Press sequence: `ON` once, then `BIS` every 50ms while the button is held, then `OFF` on release. Frames go out through the 150ms send loop, and a repeated identical action is sent at most every 130ms (4000ms on "universal" cards).
