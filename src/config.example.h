@@ -7,3 +7,8 @@
 // button). Set it a bit longer than a full open or close; the controller stops
 // the motor at its end stops.
 #define MOVE_TIME_MS 125000
+
+// How long the opposite button is pressed to stop a tap-started move (opening in
+// the default mode). Too short and the controller ignores it; too long and the
+// cover starts moving the other way.
+#define STOP_PRESS_MS 1500

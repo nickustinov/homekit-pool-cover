@@ -37,11 +37,13 @@ static bool send(NimBLERemoteCharacteristic *c, char action) {
   return c->writeValue(buf, n, true);
 }
 
-// Short press, like a finger tap in the app: ON, HOLD, OFF
-static bool tap(NimBLERemoteCharacteristic *c, char on, char hold, char off) {
+// Presses a button for `ms` like a finger in the app: ON, HOLD every 150ms, OFF
+static bool press(NimBLERemoteCharacteristic *c, char on, char hold, char off, uint32_t ms) {
   bool ok = send(c, on);
-  delay(SEND_INTERVAL_MS);
-  ok = ok && send(c, hold);
+  for (uint32_t t = SEND_INTERVAL_MS; ok && t < ms; t += SEND_INTERVAL_MS) {
+    delay(SEND_INTERVAL_MS);
+    ok = send(c, hold);
+  }
   delay(SEND_INTERVAL_MS);
   return send(c, off) && ok;
 }
@@ -108,7 +110,7 @@ static bool runMove(Dir dir) {
     const bool tapMode = isTapDirection(dir);
     Serial.printf("[cover] mode '%c', %s %s\n", opMode ? opMode : '?', tapMode ? "tapping" : "holding", dir == OPEN ? "open" : "close");
 
-    ok = tapMode ? tap(tx, on, hold, off) : send(tx, on);
+    ok = tapMode ? press(tx, on, hold, off, 2 * SEND_INTERVAL_MS) : send(tx, on);
     uint32_t start = millis();
     while (ok && !stopRequested && millis() - start < MOVE_TIME_MS && client->isConnected()) {
       delay(SEND_INTERVAL_MS);
@@ -117,8 +119,8 @@ static bool runMove(Dir dir) {
     if (!client->isConnected()) Serial.println("[cover] controller disconnected");
     if (!tapMode) send(tx, off);
     else if (stopRequested && request == NONE) {  // a plain stop, not a reversal
-      if (dir == OPEN) tap(tx, CLOSE_ON, CLOSE_HOLD, CLOSE_OFF);
-      else tap(tx, OPEN_ON, OPEN_HOLD, OPEN_OFF);
+      if (dir == OPEN) press(tx, CLOSE_ON, CLOSE_HOLD, CLOSE_OFF, STOP_PRESS_MS);
+      else press(tx, OPEN_ON, OPEN_HOLD, OPEN_OFF, STOP_PRESS_MS);
     }
     if (stopRequested) Serial.println("[cover] stopped");
   }
