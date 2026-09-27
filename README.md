@@ -12,8 +12,8 @@ Home app ──HomeKit (WiFi)──▶ ESP32 ──Bluetooth──▶ cover cont
 
 One accessory called **Pool Cover** with:
 
-- **Open** – starts opening. It stays on while the cover moves.
-- **Close** – starts closing. It stays on while the cover moves; turn it off to stop.
+- **Open** – starts opening. It stays on while the cover moves; turn it off to stop.
+- **Close** – same, for closing.
 
 The Home app may group the two into one tile. To get separate buttons, open the tile's settings and choose **Show as Separate Tiles**.
 
@@ -30,7 +30,7 @@ The controller has three operating modes, and the bridge reads the current one e
 | Hold | hold-to-run | hold-to-run |
 
 - **Hold-to-run direction:** the bridge keeps the button held for up to `MOVE_TIME_MS`. Turning the switch off releases it and the cover stops.
-- **Tap direction:** the bridge taps once and the cover runs to its end stop. It can't be stopped from HomeKit; use the key switch or the Aero XP app.
+- **Tap direction:** the bridge taps once and stays connected for `MOVE_TIME_MS`. Turning the switch off taps the opposite button briefly, which stops the cover.
 
 ## Hardware
 
@@ -96,8 +96,9 @@ That is HomeSpan's default code. To set your own, type `S 12345678` (any 8 digit
 Keep the serial monitor open and the pool in sight:
 
 1. Turn on **Open** in the Home app. The log should show `[cover] opening`, then `[cover] mode '1', tapping open`.
-2. Turn on **Close**, then turn it off partway and check that the cover stops.
-3. Turn on **Close** again and let it run to the end.
+2. Turn **Open** off partway and check that the cover stops.
+3. Turn on **Close**, turn it off partway, and check that it stops too.
+4. Turn on **Close** again and let it run to the end.
 
 | Log message | Meaning |
 |---|---|

@@ -77,8 +77,8 @@ static bool isTapDirection(Dir dir) {
 }
 
 // Runs one move while staying connected for MOVE_TIME_MS so a stop takes effect at once.
-// Hold directions keep the button down and stop on release. Tap directions can't be
-// stopped over Bluetooth: releasing and re-tapping were both tried on a real cover.
+// Hold directions keep the button down and stop on release. Tap directions stop with a
+// short tap of the opposite button (releasing or re-tapping the same one doesn't work).
 static bool runMove(Dir dir) {
   if (!findCover()) {
     Serial.println("[cover] not found");
@@ -116,6 +116,10 @@ static bool runMove(Dir dir) {
     }
     if (!client->isConnected()) Serial.println("[cover] controller disconnected");
     if (!tapMode) send(tx, off);
+    else if (stopRequested && request == NONE) {  // a plain stop, not a reversal
+      if (dir == OPEN) tap(tx, CLOSE_ON, CLOSE_HOLD, CLOSE_OFF);
+      else tap(tx, OPEN_ON, OPEN_HOLD, OPEN_OFF);
+    }
     if (stopRequested) Serial.println("[cover] stopped");
   }
   client->disconnect();
@@ -143,7 +147,7 @@ static void bleTask(void *) {
 // ---------- HomeKit side ----------
 
 // Open / Close: turning on starts the move and the switch stays on while it runs.
-// Turning it off stops a hold-to-run move. A move in the other direction is ended first.
+// Turning it off stops it. A move in the other direction is ended first.
 struct MoveButton : Service::Switch {
   SpanCharacteristic *on;
   Dir dir;
