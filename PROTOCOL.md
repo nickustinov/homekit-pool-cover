@@ -31,7 +31,7 @@ xor = 0xFF ^ every preceding byte
 | `3` | Stop |
 | `8` | Request parameters. The reply is a `P` notification. |
 
-The app never sends `3` as a stop: a hold-direction move stops when the button is released. On a real cover, neither releasing (`OFF`) nor a second tap of the same button stops a tap-direction move, but a short press of the opposite button does.
+The app never sends `3` as a stop: a hold-direction move stops when the button is released. On a real cover, neither releasing (`OFF`) nor a second tap of the same button stops a tap-direction move, and neither does pressing the opposite button on the same connection. Reconnecting and holding the opposite button for a few seconds does.
 
 The fitter-only variants (`a`–`l`) bypass safeties. Never use them.
 

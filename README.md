@@ -30,7 +30,7 @@ The controller has three operating modes, and the bridge reads the current one e
 | Hold | hold-to-run | hold-to-run |
 
 - **Hold-to-run direction:** the bridge keeps the button held for up to `MOVE_TIME_MS`. Turning the switch off releases it and the cover stops.
-- **Tap direction:** the bridge taps once and stays connected for `MOVE_TIME_MS`. Turning the switch off presses the opposite button for `STOP_PRESS_MS`, which stops the cover.
+- **Tap direction:** the bridge taps once and stays connected for `MOVE_TIME_MS`. Turning the switch off reconnects and holds the other button for `STOP_PRESS_MS`, which stops the cover.
 
 ## Hardware
 
@@ -58,7 +58,7 @@ Then edit `src/config.h`:
 |---|---|
 | `COVER_KEY` | The 4-digit code you entered in the Aero XP app when you added the cover. |
 | `MOVE_TIME_MS` | How long a move lasts, in milliseconds. Set it a few seconds longer than your slowest full open or close. The controller stops the motor at its end stops by itself. |
-| `STOP_PRESS_MS` | How long the opposite button is pressed to stop an opening cover. If turning Open off doesn't stop it, increase this. If the cover starts closing afterwards, decrease it. |
+| `STOP_PRESS_MS` | How long the other button is held to stop an opening cover. If turning Open off doesn't stop it, increase this. If the cover starts closing afterwards, decrease it. |
 
 `src/config.h` is git-ignored because it holds your cover code.
 

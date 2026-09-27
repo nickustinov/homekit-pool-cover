@@ -37,13 +37,11 @@ static bool send(NimBLERemoteCharacteristic *c, char action) {
   return c->writeValue(buf, n, true);
 }
 
-// Presses a button for `ms` like a finger in the app: ON, HOLD every 150ms, OFF
-static bool press(NimBLERemoteCharacteristic *c, char on, char hold, char off, uint32_t ms) {
+// Short press, like a finger tap in the app: ON, HOLD, OFF
+static bool tap(NimBLERemoteCharacteristic *c, char on, char hold, char off) {
   bool ok = send(c, on);
-  for (uint32_t t = SEND_INTERVAL_MS; ok && t < ms; t += SEND_INTERVAL_MS) {
-    delay(SEND_INTERVAL_MS);
-    ok = send(c, hold);
-  }
+  delay(SEND_INTERVAL_MS);
+  ok = ok && send(c, hold);
   delay(SEND_INTERVAL_MS);
   return send(c, off) && ok;
 }
@@ -78,10 +76,9 @@ static bool isTapDirection(Dir dir) {
   return opMode == '2' || (opMode != '3' && dir == OPEN);
 }
 
-// Runs one move while staying connected for MOVE_TIME_MS so a stop takes effect at once.
-// Hold directions keep the button down and stop on release. Tap directions stop with a
-// short tap of the opposite button (releasing or re-tapping the same one doesn't work).
-static bool runMove(Dir dir) {
+// Runs one move, staying connected for `moveMs`. Hold directions keep the button down
+// and stop on release. Tap directions tap once and just keep the connection alive.
+static bool runMove(Dir dir, uint32_t moveMs) {
   if (!findCover()) {
     Serial.println("[cover] not found");
     return false;
@@ -110,18 +107,14 @@ static bool runMove(Dir dir) {
     const bool tapMode = isTapDirection(dir);
     Serial.printf("[cover] mode '%c', %s %s\n", opMode ? opMode : '?', tapMode ? "tapping" : "holding", dir == OPEN ? "open" : "close");
 
-    ok = tapMode ? press(tx, on, hold, off, 2 * SEND_INTERVAL_MS) : send(tx, on);
+    ok = tapMode ? tap(tx, on, hold, off) : send(tx, on);
     uint32_t start = millis();
-    while (ok && !stopRequested && millis() - start < MOVE_TIME_MS && client->isConnected()) {
+    while (ok && !stopRequested && millis() - start < moveMs && client->isConnected()) {
       delay(SEND_INTERVAL_MS);
       ok = send(tx, tapMode ? KEEP_ALIVE : hold);
     }
     if (!client->isConnected()) Serial.println("[cover] controller disconnected");
     if (!tapMode) send(tx, off);
-    else if (stopRequested && request == NONE) {  // a plain stop, not a reversal
-      if (dir == OPEN) press(tx, CLOSE_ON, CLOSE_HOLD, CLOSE_OFF, STOP_PRESS_MS);
-      else press(tx, OPEN_ON, OPEN_HOLD, OPEN_OFF, STOP_PRESS_MS);
-    }
     if (stopRequested) Serial.println("[cover] stopped");
   }
   client->disconnect();
@@ -140,9 +133,19 @@ static void bleTask(void *) {
     request = NONE;
     stopRequested = false;
     Serial.printf("[cover] %s\n", dir == OPEN ? "opening" : "closing");
-    if (!runMove(dir)) Serial.println("[cover] move failed");
+    bool ok = runMove(dir, MOVE_TIME_MS);
+    if (!ok) Serial.println("[cover] move failed");
+    // Releasing or re-tapping doesn't stop a tap move, and neither does pressing the other
+    // button on the same connection. A fresh connection holding the other button does.
+    bool stopTapMove = ok && stopRequested && request == NONE && isTapDirection(dir);
     active = NONE;
     delay(1000);  // let the controller free its connection before the next move
+    if (stopTapMove) {
+      Serial.println("[cover] stopping with the other button");
+      stopRequested = false;
+      runMove(dir == OPEN ? CLOSE : OPEN, STOP_PRESS_MS);
+      delay(1000);
+    }
   }
 }
 
@@ -170,7 +173,7 @@ struct MoveButton : Service::Switch {
   }
 
   void loop() override {
-    bool running = request == dir || active == dir;
+    bool running = request == dir || (active == dir && !stopRequested);
     if (on->getVal() != running && on->timeVal() > 1000) on->setVal(running);
   }
 };
