@@ -11,4 +11,4 @@
 // How long the other button is held to stop a tap-started move (opening in the
 // default mode). Too short and the controller ignores it; too long and the cover
 // starts moving the other way.
-#define STOP_PRESS_MS 3000
+#define STOP_PRESS_MS 1500
